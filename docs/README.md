@@ -28,15 +28,17 @@
 8. `openclaw-analysis-for-banking-assistant.md`
 9. `openclaw-official-architecture-and-tech-stack.md`
 10. `banking-openclaw-product-architecture-sketch.md`
-11. `banking-openclaw-prd-draft.md`
+11. `banking-openclaw-technical-architecture.md`
+12. `banking-openclaw-prd-draft.md`
+13. `banking-openclaw-prd-mvp.md`
 
 ### 4. 最后看任务体系与实现方法
 
-12. `cognitive-substitution-and-orchestration-for-banking-assistant.md`
-13. `task-definition-and-examples-for-banking-assistant.md`
-14. `task-template-vs-dynamic-instance-in-banking-assistant.md`
-15. `long-tail-task-handling-in-banking-assistant.md`
-16. `composite-tasks-in-banking-assistant.md`
+14. `cognitive-substitution-and-orchestration-for-banking-assistant.md`
+15. `task-definition-and-examples-for-banking-assistant.md`
+16. `task-template-vs-dynamic-instance-in-banking-assistant.md`
+17. `long-tail-task-handling-in-banking-assistant.md`
+18. `composite-tasks-in-banking-assistant.md`
 
 ---
 
@@ -134,7 +136,7 @@ FTE 替代测算框架。
 - OpenClaw 对银行员工 AI Assistant 的启发是什么
 - OpenClaw 官方定义下的技术架构和技术栈是什么
 - 银行版产品应如何银行化改造
-- 架构和 PRD 雏形应该怎么写
+- 架构和 PRD 应该如何从草图走向可落地版本
 
 ### `openclaw-analysis-for-banking-assistant.md`
 
@@ -165,6 +167,16 @@ FTE 替代测算框架。
 - 治理层
 - 度量层
 
+### `banking-openclaw-technical-architecture.md`
+
+银行版 OpenClaw 的技术架构展开稿。  
+重点补全：
+
+- 前后端与控制平面拆分
+- Agent Runtime / Workflow / Tool / Memory 等核心服务
+- 身份、权限、审计与安全边界
+- 存储、消息、观测与部署建议
+
 ### `banking-openclaw-prd-draft.md`
 
 银行版 OpenClaw 的 PRD 雏形。  
@@ -180,9 +192,38 @@ FTE 替代测算框架。
 
 组织。
 
+### `banking-openclaw-prd-mvp.md`
+
+聚焦首版落地范围的 MVP PRD。  
+适合在较完整的 PRD 雏形基础上，进一步收敛：
+
+- MVP 目标用户与岗位范围
+- 首版关键场景与功能边界
+- 非目标范围与阶段划分
+- 验收指标与上线节奏
+
 ---
 
-## 六、认知替代与流程编排
+## 六、路线图与推进规划
+
+这一组文档回答的是：
+
+- 从当前文档体系出发，项目应该按什么节奏推进
+- 哪些事项适合按阶段拆解
+- 中长期规划如何与 MVP 对齐
+
+### `ROADMAP.md`
+
+项目路线图与阶段性推进文档。  
+适合用于：
+
+- 对齐阶段目标
+- 安排里程碑
+- 拆分近期与中期工作包
+
+---
+
+## 七、认知替代与流程编排
 
 这一组文档回答的是：
 
@@ -199,7 +240,7 @@ FTE 替代测算框架。
 
 ---
 
-## 七、任务体系设计
+## 八、任务体系设计
 
 这一组文档回答的是：
 
@@ -247,7 +288,7 @@ FTE 替代测算框架。
 
 ---
 
-## 八、按使用场景查阅
+## 九、按使用场景查阅
 
 如果你当前是按工作目标来找文档，可以参考下面这个索引。
 
@@ -274,7 +315,9 @@ FTE 替代测算框架。
 
 - `openclaw-analysis-for-banking-assistant.md`
 - `banking-openclaw-product-architecture-sketch.md`
+- `banking-openclaw-technical-architecture.md`
 - `banking-openclaw-prd-draft.md`
+- `banking-openclaw-prd-mvp.md`
 
 ### 场景 D：我要定义任务体系和 orchestration
 
@@ -296,7 +339,17 @@ FTE 替代测算框架。
 
 ---
 
-## 九、建议的后续补充方向
+### 场景 F：我要安排项目路线图和阶段推进
+
+建议先看：
+
+- `ROADMAP.md`
+- `banking-openclaw-prd-mvp.md`
+- `banking-openclaw-technical-architecture.md`
+
+---
+
+## 十、建议的后续补充方向
 
 如果要继续往下沉淀，最自然的下一批文档是：
 
@@ -330,7 +383,7 @@ FTE 替代测算框架。
 
 ---
 
-## 十、最短总结
+## 十一、最短总结
 
 本目录当前已经形成四条主线：
 
@@ -344,6 +397,7 @@ FTE 替代测算框架。
 - `bank-ai-agent-complete-analysis.md`
 - `bank-ai-headcount-reduction-analysis.md`
 - `banking-openclaw-product-architecture-sketch.md`
+- `banking-openclaw-prd-mvp.md`
 - `task-definition-and-examples-for-banking-assistant.md`
 
 这四篇足以建立整体框架。
