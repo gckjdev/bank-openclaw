@@ -31,6 +31,27 @@
 - 对象边界、状态归属和 API 口径可以直接指导建模
 - 终局能力不会反向污染 MVP 首版实现
 
+### 1.2 `docs/mvp/` 专题索引
+
+为避免主文档持续膨胀，部分 MVP 专题说明拆到 `docs/mvp/` 目录单独维护。
+
+- `docs/mvp/assistant-self-learning-and-agents-md.md`
+  - assistant 自我学习与成长机制
+  - 银行版 `AGENTS.md` 的定位、成长闭环和最小模板
+- `docs/mvp/engineering-coding-best-practices.md`
+  - 当前 MVP 架构下的 engineering / coding best practices
+  - 按前端、后端、运行时、数据库、工具网关、测试等目的分节
+- `docs/mvp/frontend-engineering-checklist.md`
+  - `apps/web` 的前端实现 checklist
+  - 包含页面拆分、状态管理、路由组织与文件行数约束
+- `docs/mvp/backend-runtime-engineering-checklist.md`
+  - 后端、运行时与工具网关 checklist
+  - 包含对象边界、runtime adapter、审计与文件行数约束
+- `docs/mvp/database-engineering-checklist.md`
+  - 数据库建模、migration、索引与历史保留 checklist
+- `docs/mvp/testing-quality-checklist.md`
+  - 测试分层、mock 策略、关键闭环与质量门槛 checklist
+
 ---
 
 ## 2. MVP 架构原则
@@ -194,7 +215,7 @@ MVP 不应只覆盖被动响应链路，还应从第一天把轻量 `cron job / 
 
 - `ProactiveJob` 是权威业务定义，保存在 `API Server`
 - `Cron Scheduler` 负责判断哪些 job 到期应执行
-- `BullMQ` 负责 repeatable jobs、retry、手工补跑和 worker 级执行承接
+- 首版不强依赖独立消息队列，先用简单定时扫描和手动触发跑通主动任务闭环
 - 主动任务执行结果仍通过 `API Server` 回写，不再额外引入第二套权威调度对象
 
 ---
@@ -208,11 +229,9 @@ MVP 不应只覆盖被动响应链路，还应从第一天把轻量 `cron job / 
 3. `API Server`
 4. `Tool Gateway`
 
-再配 `3` 个基础设施：
+再配 `1` 个核心基础设施：
 
 1. `PostgreSQL`
-2. `Redis`
-3. `Object Storage`
 
 ```mermaid
 flowchart LR
@@ -224,8 +243,6 @@ flowchart LR
     gateway --> llm["Model Gateway / LLM"]
     gateway --> tool["Tool Gateway"]
     api --> pg["PostgreSQL"]
-    api --> redis["Redis"]
-    api --> obj["Object Storage"]
     tool --> core["Core Systems / Workflow / CRM / Docs"]
 ```
 
@@ -240,8 +257,6 @@ flowchart LR
 | `API Server` | OpenClaw 中未显式拆出的后端对象服务 | 银行版把 `Session`、`Task`、模板、审批、审计查询和持久化显式下沉为远程服务 |
 | `Tool Gateway` | tool policy / exec approvals / sandbox 边界 | 从个人信任模型升级为企业工具网关、审计、幂等和正式系统桥接 |
 | `PostgreSQL` | session / cron / state 的显式持久化思路 | 从本地文件式状态升级为企业数据库中的 `Session / Task / Plan / Audit` 权威存储 |
-| `Redis` | queue / lane / runtime buffering 的系统思想 | 用于任务队列、幂等键、运行态缓存和异步调度 |
-| `Object Storage` | Memory / transcript / explicit artifacts 的显式存储思路 | 用于附件、草稿、大结果和执行产物归档 |
 
 如果一句话概括：
 
@@ -1150,6 +1165,243 @@ type TaskMaterializationResult = {
 
 - `征信授权书是不是必须材料？`
 
+### 4.4.4 银行版 `USER.md / SOUL.md / AGENTS.md / TOOLS.md` 对应设计
+
+OpenClaw 会把 `USER.md`、`SOUL.md`、`AGENTS.md`、`TOOLS.md` 这类 workspace bootstrap files 注入到每轮 agent run 中。  
+银行版值得借鉴这套分层思想，但不建议把它们原样照搬成“几份本地 markdown 文件就是系统真相源”。
+
+更适合银行版 MVP 的方式是：
+
+- 保留“用户画像 / 助手宪章 / agent 运行规则 / tool 使用规则”四层语义
+- 把正式配置和正式权限口径放在 `API Server + PostgreSQL`
+- 由 `Assistant Gateway` 在每次 `Plan Agent / Execution Agent` 运行前统一编译 prompt context
+- 本地 markdown 文件如果存在，更适合作为可维护素材或默认模板，而不是唯一权威来源
+
+建议做如下映射：
+
+1. `USER.md` -> `User Profile Context`
+   - 定义“当前操作人是谁，以及他处于什么岗位和权限语境下”
+   - 最小应包含：
+     - 用户标识、部门、岗位、语言与展示偏好
+     - `RoleProfile` 绑定
+     - 可访问系统范围
+     - 默认协作偏好，例如先给结论、是否允许先生成草稿
+   - 更适合做成服务端托管的 `user-profile.md`
+   - 注入给模型时应压缩成轻量 `user context block`，而不是把整份 markdown 原样拼进 prompt
+
+2. `SOUL.md` -> `Assistant Charter`
+   - 银行版不应把这一层做成偏人格化的“灵魂设定”，而应做成企业版助手宪章
+   - 它更适合定义：
+     - 真实性优先，不编造制度、审批结论和系统结果
+     - 风险优先，正式动作必须服从审批和权限边界
+     - 先结论、后依据、再风险提示的表达方式
+     - 可以草拟、解释、整理，但不伪装成正式系统写入
+     - 关键建议、关键动作、关键工具调用要可审计
+   - 这层建议由产品、风控、合规共同版本化维护，并对 `Plan Agent` 和 `Execution Agent` 同时生效
+
+3. `AGENTS.md` -> `Agent Operating Policy`
+   - 这一层定义 agent 运行规则，而不是用户或工具信息
+   - 建议拆成：
+     - `shared operating policy`
+     - `plan-agent policy`
+     - `execution-agent policy`
+   - `Plan Agent` 规则应重点约束：
+     - 如何做 `Planning Interpretation`
+     - 如何识别 `Task` 候选并生成 `draftPlan`
+     - 何时需要追问、何时允许形成候选任务、何时不进入任务系统
+   - `Execution Agent` 规则应重点约束：
+     - 只能基于正式 `Plan` 推进
+     - 何时调用 tool、何时暂停等待审批
+     - 何时请求 `replan`
+     - 何时生成 `TaskExecution / ToolCall / TaskEpisode` 写回事实
+   - 这样比把所有规则堆在一个总 prompt 里更适合银行版多角色、可治理的运行语义
+
+4. `TOOLS.md` -> `Tool Usage Policy`
+   - 这一层不只是“有哪些工具”，更重要的是“什么时候该用、能用到什么程度、哪些结果不能直接当最终事实”
+   - 它应同时覆盖：
+     - `Base Runtime Tools`
+     - `Enterprise Extension Tools`
+     - `Composite Domain Tools`
+   - 建议包含三类内容：
+     - 结构化工具目录：`ToolRegistry / ToolPolicy / ApprovalPolicy / RiskTier`
+     - prompt 规则：查询优先、草拟优先、正式动作必须审批、失败后的降级策略
+     - 审计提示：哪些调用必须写原因、哪些结果必须二次核验
+   - 这层和 `Tool Gateway` 紧密关联，但不等于 `Tool Gateway` 的接口文档本身
+
+从系统实现角度，建议把这四层统一看作银行版的 `bootstrap context`：
+
+- `API Server` 负责托管这些 markdown profile / policy 文档及其版本
+- `Assistant Gateway` 负责按当前用户、当前会话、当前任务、当前 agent 角色编译上下文
+- `Plan Agent` 和 `Execution Agent` 读取的不是若干散乱 prompt 字符串，而是同一套受版本控制的上下文块
+- 轻量子 agent 或后续 specialized agent 可以只注入其中一部分，例如只继承 `Agent Operating Policy + Tool Usage Policy`
+
+MVP 阶段建议最少先落这六个逻辑构件：
+
+- `User Profile Context`
+- `Assistant Charter`
+- `Plan Agent Policy`
+- `Execution Agent Policy`
+- `Tool Usage Policy`
+- `Approval / Risk Policy`
+
+这样一来，银行版既借鉴了 OpenClaw“把长期稳定上下文从临时对话中抽出来”的优点，又不会把企业产品做成依赖本地 markdown 文件驱动的个人助手壳。
+
+### 4.4.5 `AGENTS.md` 驱动的 assistant 自我学习与成长机制
+
+如果希望每个 assistant 不是一套静态 prompt，而是能随着任务实践逐步成长，那么 `AGENTS.md` 不应只写“怎么做事”，还应写清楚“如何从任务中学习”。
+
+这里建议借鉴 OpenClaw 的 `memory + skills` 体系，以及 Hermes 的 `observe -> distill -> reuse -> refine` 思路，但要改造成适合银行场景的受控成长机制。
+
+一个核心判断要先写清楚：
+
+**`AGENTS.md` 适合定义成长机制本身，但不适合独自承载全部学习内容。**
+
+也就是说：
+
+- `AGENTS.md`：负责定义学习规则、学习边界、学习升级路径
+- `TaskExecution / ToolCall / AuditEvent / TaskEpisode`：负责提供可验证的学习事实
+- `MEMORY.md`：负责沉淀长期稳定记忆
+- `memory/YYYY-MM-DD.md`：负责沉淀短期观察、反思和候选经验
+- `skills/*.md`：负责沉淀可复用的程序性能力
+- `TOOLS.md / approval-risk.md`：负责沉淀工具经验和治理边界经验
+
+#### A. `AGENTS.md` 应定义什么
+
+建议它至少定义六类规则：
+
+1. **学习触发条件**
+   - 任务完成后
+   - 执行失败或回退后
+   - 人工接管后
+   - 收到明确用户纠正后
+   - 连续多次执行相似任务后
+
+2. **学习分类规则**
+   - 用户长期偏好 -> `MEMORY.md`
+   - 当日观察和反思 -> `memory/YYYY-MM-DD.md`
+   - 稳定可复用流程 -> `skills/*.md`
+   - 工具经验与坑点 -> `TOOLS.md`
+   - 风险、审批与停手机制 -> `approval-risk.md`
+   - agent 行为规则改进 -> `AGENTS.md` 修订候选
+
+3. **学习质量门槛**
+   - 必须尽量基于执行事实，而不是只靠 LLM 自我感觉
+   - 优先吸收重复出现、被验证过、有人类反馈支撑的经验
+   - 单次偶然成功不应直接升级成全局规则
+
+4. **自动生效边界**
+   - 可自动吸收：
+     - 用户表达偏好
+     - 回复结构偏好
+     - 低风险工具使用技巧
+     - 已被多次验证的任务步骤
+   - 不可自动改写：
+     - 权限边界
+     - 审批规则
+     - 风险分级
+     - 制度口径
+     - 工具 allow / deny 规则
+
+5. **修订方式**
+   - `AGENTS.md` 不建议被 assistant 直接覆盖
+   - 更稳的方式是生成 `agents.patch.md` 或 `learning-proposal.md`
+   - 由管理员、运营或 supervisor agent 审核后再正式发布
+
+6. **淘汰与遗忘机制**
+   - 过期经验应可归档
+   - 被新制度或新事实推翻的经验应可失效
+   - 长期不命中的经验不应持续占用 bootstrap context
+
+#### B. 建议的成长闭环
+
+银行版 assistant 的成长闭环可以固定成：
+
+```text
+observe
+  -> reflect
+  -> distill
+  -> promote
+  -> reuse
+  -> refine
+```
+
+各阶段建议语义如下：
+
+1. `observe`
+   - assistant 执行任务
+   - 产生 `TaskExecution`、`ToolCall`、`AuditEvent`
+   - 系统基于事件流切出 `TaskEpisode`
+
+2. `reflect`
+   - 在完成、失败、人工接管或复杂步骤结束后触发一次轻量反思
+   - 反思不负责改规则，只负责提出“哪些值得记住”
+
+3. `distill`
+   - 把候选经验分类成偏好、流程、工具技巧、风险提醒、规则修订建议
+
+4. `promote`
+   - 把不同类型经验写入对应承载层：
+     - `MEMORY.md`
+     - `memory/YYYY-MM-DD.md`
+     - `skills/*.md`
+     - `TOOLS.md`
+     - `approval-risk.md`
+     - `AGENTS.md` 修订候选
+
+5. `reuse`
+   - 后续相似任务优先读取相关 memory / skill / policy
+
+6. `refine`
+   - 新经验和旧经验冲突时，允许修正、降权或淘汰旧经验
+
+#### C. 和 OpenClaw / Hermes 的关系
+
+这里可以直接借鉴两点：
+
+- 从 OpenClaw 借鉴：
+  - “记忆必须显式写入某种持久层，而不是假设模型自己会记住”
+  - “skills 是可复用程序，不只是多写几段 prompt”
+- 从 Hermes 借鉴：
+  - “多次相似任务后再提炼成 skill”
+  - “通过 reflection checkpoint 做 observe -> distill -> refine”
+
+但银行版要额外加一层企业约束：
+
+- 自我学习是 **行为与程序的成长**
+- 不是 assistant 自行改写权限、制度或审批边界
+
+#### D. MVP 阶段先做到什么程度
+
+首版不建议直接上“自动改写正式 `AGENTS.md`”。
+
+更稳的 MVP 落地顺序是：
+
+1. 每次任务完成、失败或人工接管后，生成 `learning candidate`
+2. 按规则把 candidate 分类到：
+   - `memory`
+   - `skill draft`
+   - `tool note`
+   - `approval-risk note`
+   - `agents patch`
+3. 允许自动写入：
+   - `memory/YYYY-MM-DD.md`
+   - 一部分低风险 `MEMORY.md` 更新候选
+4. 必须人工审核后才能正式发布：
+   - `AGENTS.md`
+   - `TOOLS.md`
+   - `approval-risk.md`
+   - 正式 `skills/*.md`
+
+这样做的好处是：
+
+- assistant 确实具备成长能力
+- 但成长过程仍可治理、可审计、可回滚
+- 不会因为一次 hallucination 就污染整个 assistant 的长期行为
+
+#### E. 一句话定义
+
+**`AGENTS.md` 在银行版里不只是运行说明书，还应成为 assistant 的“成长协议”；但成长内容应分流到 memory、skills、tool notes 和风险文档中，由事实驱动、分层沉淀、受控生效。**
+
 ## 4.5 `Tool Gateway`
 
 必须独立部署，职责清晰收口为：
@@ -1881,7 +2133,7 @@ type PlanStep = {
   - 候选后续动作
   - 新建或更新某个 `Task`
 - 在实现上，建议把它理解为“业务定义层对象”，而不是底层队列中的 job 实例
-- `Cron Scheduler + BullMQ` 负责执行承接，`ProactiveJob` 负责业务语义和治理归属
+- `Cron Scheduler` 负责执行承接，`ProactiveJob` 负责业务语义和治理归属
 
 和其他模型的关系：
 
@@ -2397,6 +2649,192 @@ TaskInstance
 
 **`RoleProfile` 提供岗位劳动基线，`TaskTemplate` 提供稳定任务口径，`LaborLedger` 提供真实工时事实，`SubstitutionScore` 负责把这些事实翻译成 FTE 与 headcount 替代语言。**
 
+## 5.15 `bootstrap context` 的最小数据对象设计
+
+前面提到的六个逻辑构件：
+
+- `User Profile Context`
+- `Assistant Charter`
+- `Plan Agent Policy`
+- `Execution Agent Policy`
+- `Tool Usage Policy`
+- `Approval / Risk Policy`
+
+这里的设计可以再收得更轻：
+
+- 不把它拆成一组复杂数据对象
+- 直接以 `md` 文件作为主要表示形式
+- 由服务端统一托管、版本化和分发
+- `Assistant Gateway` 在运行前按固定顺序读取并拼装
+
+也就是说，MVP 阶段更适合采用：
+
+**服务端托管 markdown profiles / policies + 运行时轻量拼装**
+
+### A. 建议直接管理的 6 类 `md` 文件
+
+1. `user-profile.md`
+   - 表达当前用户是谁、所属部门/岗位、偏好的响应风格、可访问系统范围
+   - 对应 OpenClaw 的 `USER.md`
+
+2. `assistant-charter.md`
+   - 表达银行版助手的核心原则、真实性要求、风险边界、表达风格
+   - 对应 OpenClaw 的 `SOUL.md`
+
+3. `plan-agent.md`
+   - 表达 `Plan Agent` 的工作规则：如何做 planning、何时追问、何时形成候选任务
+   - 属于 `AGENTS.md` 的拆分部分
+
+4. `execution-agent.md`
+   - 表达 `Execution Agent` 的工作规则：如何执行正式 `Plan`、何时调用 tool、何时暂停审批
+   - 属于 `AGENTS.md` 的拆分部分
+
+5. `tools.md`
+   - 表达工具使用原则、工具分层、哪些工具结果不能直接当最终事实
+   - 对应 OpenClaw 的 `TOOLS.md`
+
+6. `approval-risk.md`
+   - 表达审批边界、风险动作分类、哪些动作必须停下来等人确认
+   - 属于银行版新增的企业治理文档
+
+### B. 存储方式建议
+
+MVP 不必把这些内容拆成复杂表结构，建议直接由服务端管理 markdown 文档本体。
+
+可以采用两种等价实现方式：
+
+1. **数据库保存 markdown 文本**
+   - `API Server` 把文档正文作为文本字段存进 `PostgreSQL`
+   - 对外仍按“md 文档”来读取和管理
+
+2. **服务端文件目录管理**
+   - 由 `API Server` 管理固定目录下的 `.md` 文件
+   - 通过后台页面或管理接口编辑、发布、回滚
+
+如果只看 MVP，优先建议第一种：
+
+- 不增加额外文件同步问题
+- 更容易做版本、启用状态和审计
+- 但逻辑上仍把它们视为 markdown 文档，而不是细颗粒业务对象
+
+### C. 最小元数据即可
+
+即使放在数据库里，也只需要给这些 markdown 文档配一层很轻的元数据，不需要再展开成大量对象模型。
+
+建议最小元数据：
+
+- `doc_id`
+- `doc_type`
+- `scope_type`
+- `scope_ref`
+- `version`
+- `status`
+- `content_markdown`
+- `checksum`
+- `updated_at`
+
+其中：
+
+- `doc_type` 可先支持：
+  - `user_profile`
+  - `assistant_charter`
+  - `plan_agent`
+  - `execution_agent`
+  - `tools`
+  - `approval_risk`
+- `scope_type` 可先支持：
+  - `global`
+  - `user`
+  - `department`
+  - `role_profile`
+
+这层元数据的作用只是：
+
+- 知道该读哪份文档
+- 知道当前生效的是哪一版
+- 便于回滚和审计
+
+而不是把文档内容拆成新的产品对象体系。
+
+### D. 运行时怎么用
+
+`Assistant Gateway` 在启动 `Plan Agent / Execution Agent` 前，按固定顺序读取对应 markdown 文档：
+
+```text
+user-profile.md
+-> assistant-charter.md
+-> plan-agent.md / execution-agent.md
+-> tools.md
+-> approval-risk.md
+```
+
+然后做两件事：
+
+1. 截取当前运行真正需要的摘要
+2. 按固定顺序拼成 agent run 的 bootstrap context
+
+注意：
+
+- 不建议把整份长文一股脑全部注入
+- 应保留 markdown 文档作为人可维护源
+- 运行时可以生成短摘要或裁剪片段，再喂给模型
+
+### E. 文件内容形式建议
+
+为了方便维护，建议文档正文仍以自然语言为主，但可以允许非常轻的头部元信息，例如：
+
+```md
+---
+docType: plan_agent
+scopeType: global
+version: v1
+---
+
+# Plan Agent Policy
+
+## 目标
+- 优先理解用户意图并形成 planning interpretation
+
+## 必须遵守
+- 未形成正式 Plan 前，不进入执行态
+- 不确定是否形成任务时，优先给出 candidate task
+```
+
+这里的关键点是：
+
+- **正文依然是 markdown**
+- 头部元信息只做检索和版本识别
+- 不把文档进一步拆成大量 JSON 字段
+
+### F. 审计怎么做
+
+如果后续需要追查某次运行用了哪些规则，不需要存整段 prompt，只需要在 `TaskExecution` 或 `AuditEvent` 里记录：
+
+- `bootstrap_doc_refs_json`
+- `bootstrap_checksum`
+- `bootstrap_version`
+
+也就是记录：
+
+- 这次读取了哪些 `md` 文档
+- 每份文档是哪一版
+- 最终拼装上下文的 checksum 是什么
+
+这样已经足够支持审计与回溯。
+
+### G. MVP 最小实现建议
+
+首版建议直接做到下面这几件事就够了：
+
+1. 在服务端托管 6 类 markdown 文档
+2. 提供后台管理页或简单管理接口用于编辑与发布
+3. `Assistant Gateway` 能按用户 / agent 角色读取并拼装这些文档
+4. 在执行记录中保存文档引用和 checksum
+
+一句话概括这层设计：
+
+**银行版先把 `USER.md / SOUL.md / AGENTS.md / TOOLS.md` 收敛成“服务端托管的 markdown profiles / policies”，而不是先做一套复杂数据模型。**
+
 ---
 
 ## 6. MVP 最小接口
@@ -2556,6 +2994,7 @@ freetalk/
     analytics/
     proactive-jobs/
     prompts/
+    assistant-policies/
     task-templates/
     role-profiles/
     skills/
@@ -2580,7 +3019,8 @@ freetalk/
 - `packages/proactive-jobs`：主动任务定义、调度规则和 job handlers
 - `packages/domain`：对象定义、状态枚举、DTO
 - `packages/db`：ORM、Repository、迁移
-- `packages/prompts`：`plan-agent / execution-agent / summarizer` prompts
+- `packages/prompts`：`plan-agent / execution-agent / summarizer` prompts，以及运行时 prompt assembly
+- `packages/assistant-policies`：`Assistant Charter`、`Tool Usage Policy`、`Approval / Risk Policy` 等可版本化策略素材
 - `packages/role-profiles`：岗位画像、岗位任务结构和替代基线配置
 - `packages/task-templates`：任务模板配置
 - `packages/skills`：岗位动作技能封装
@@ -2663,7 +3103,7 @@ freetalk/
 
 - 语言：`TypeScript`
 - 框架：`Fastify`
-- 幂等 / 限流 / 重试：基于 `Redis` 自建轻量中间件
+- 幂等 / 限流 / 重试：基于应用内中间件 + `PostgreSQL` 记录做轻量实现
 
 原因：
 
@@ -2699,26 +3139,25 @@ freetalk/
 #### `packages/proactive-jobs`
 
 - 语言：`TypeScript`
-- 调度建议：`BullMQ`
+- 组织方式：纯规则与 handler 模块，由 `Cron Scheduler` 或手动触发入口调用
 
 原因：
 
 - 首版既需要手动触发，也需要定时 job
-- `BullMQ` 和 `Redis` 组合可以同时覆盖 queue、retry、repeatable jobs
-- `ProactiveJob` 仍是业务侧的权威调度定义，`BullMQ` 只是底层执行器，不应成为新的业务对象来源
+- `ProactiveJob` 仍是业务侧的权威调度定义
+- MVP 先不引入独立消息队列，避免把产品验证阶段变成异步基础设施建设阶段
 
 ### 基础设施选型
 
 - 数据库：`PostgreSQL 16+`
-- 缓存 / 队列 / job：`Redis 7+`
-- 对象存储：`S3 / MinIO`
+- 其他基础设施：MVP 先不强依赖独立缓存或对象存储
 - 全文检索：MVP 可先不单独上；必要时补 `PostgreSQL FTS`
 - 向量检索：MVP 可先用 `pgvector`
 
 ### 模型与异步能力
 
 - LLM 网关：先走统一 `Model Gateway` 抽象
-- 首版消息队列 / job：`BullMQ`
+- 首版异步 job：先由 `Cron Scheduler + ProactiveJob` 跑通，不强依赖独立消息队列
 - 流式返回：`WebSocket` 优先，必要时补 `SSE`
 
 ### 测试与工程基础设施
@@ -2747,7 +3186,7 @@ freetalk/
 
 所以我更推荐：
 
-**MVP 先统一用 `TypeScript + Fastify + React + Drizzle + Redis/BullMQ + PostgreSQL`。**
+**MVP 先统一用 `TypeScript + Fastify + React + Drizzle + PostgreSQL`。**
 
 ### 关于 `CLI` 放在 `apps` 还是 `packages`
 
@@ -3083,7 +3522,7 @@ src/
 
 - 增加 `ProactiveJob` 表
 - 增加 `Cron Scheduler`
-- 通过 `BullMQ` 承接 repeatable jobs、retry 和手工补跑
+- 先用简单定时扫描和手动触发跑通主动任务闭环
 - 先只支持每日提醒和逾期跟进两类 job
 - 把主动结果回挂到 `Session` / `Task`
 
@@ -3125,7 +3564,7 @@ src/
 
 如果目标是“方便快速搭建起代码框架”，最适合的不是终局微服务架构，而是：
 
-**`Workbench Web + Assistant Gateway（内嵌 Runtime）+ API Server + Tool Gateway + Postgres/Redis/Object Storage` 的 MVP 工程架构。**
+**`Workbench Web + Assistant Gateway（内嵌 Runtime）+ API Server + Tool Gateway + PostgreSQL` 的 MVP 工程架构。**
 
 其中最关键的不是服务数量，而是四条主线是否从第一天就成立：
 
