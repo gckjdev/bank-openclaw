@@ -1,15 +1,8 @@
 # Backend Code Guideline
-
 ## Scope
-
-Applies to:
-
-- `apps/api`
-- `apps/cli`
-- Server-side `packages/*`
+Applies to `apps/api`, `apps/cli`, and server-side `packages/*`.
 
 Default stack:
-
 - `TypeScript`
 - `Node.js`
 - `Fastify`
@@ -19,39 +12,28 @@ Default stack:
 - `Drizzle ORM`
 - `PostgreSQL`
 
----
-
-## AI Usage
-
-When the LLM generates backend code, use this decision order by default:
-
-1. Reuse the existing module boundaries and directory structure
-2. Define schemas and types before writing routes, commands, or services
+## Priority
+1. Reuse existing module boundaries and directory structure
+2. Define schemas and types before routes, commands, or services
 3. Keep routes and commands thin
 4. Put business orchestration in services
 5. Put data access in repositories
 
-Do not introduce a new framework, dependency injection container, or heavy runtime abstraction unless there is a clear reason.
+Do not introduce a new framework, DI container, or heavy runtime abstraction unless the task clearly requires it.
 
----
-
-## Must Rules
-
+## Hard Rules
 - API, CLI, and WebSocket inputs and outputs must have explicit schemas
 - `Zod` owns boundary validation; business rules belong in services
-- Routes and commands should only parse input, validate, invoke, and format responses
-- Services should not directly depend on HTTP request/reply or CLI I/O
-- Repositories should not carry complex business workflows
-- `--json` output must be stable and must not include extra text
+- Routes and commands only parse input, validate, invoke, and format responses
+- Keep each code file under a hard maximum of `500` lines; start splitting around `250-300` lines
+- Services should not depend directly on HTTP request/reply or CLI I/O
+- Repositories should not carry business workflows
+- `--json` output must be stable and free of extra text
 - Errors must be categorized, and logs must keep key context
-- Do not use broad `any` types, implicit return shapes, or vague message protocols
-
----
+- Avoid broad `any`, implicit return shapes, and vague message protocols
 
 ## Default Structure
-
-Default API structure:
-
+API:
 ```text
 apps/api/src
   /plugins
@@ -60,9 +42,7 @@ apps/api/src
   /db
   /lib
 ```
-
-Default CLI structure:
-
+CLI:
 ```text
 apps/cli/src
   /commands
@@ -71,171 +51,57 @@ apps/cli/src
   /schemas
   /lib
 ```
+Within modules, prefer `*.schema.ts`, `*.service.ts`, `*.repository.ts`, and `*.route.ts` or `*.command.ts`.
 
-Within a module, prefer these file splits:
+## API
+`Fastify` route handlers should only do parameter reading, `Zod` validation, service invocation, response formatting, and required auth / permission hooks.
 
-- `*.schema.ts`
-- `*.service.ts`
-- `*.repository.ts`
-- `*.route.ts` or `*.command.ts`
+Do not use routes for:
+- Business workflows
+- Direct SQL
+- Large data transformation
 
----
+## Service, Repository, WebSocket
+Services own business rules, cross-repository coordination, transactions, idempotency, and audit coordination.
 
-## API Rules
+Repositories own reads, writes, clear query semantics, and reusable data access methods.
 
-`Fastify` route handlers should only do:
-
-- Parameter reading
-- `Zod` validation
-- Service invocation
-- Status code and response formatting
-- Registration of required auth / permission hooks
-
-Do not use routes to:
-
-- Implement complex business workflows
-- Write SQL directly
-- Perform large amounts of data transformation
-
-Services are responsible for:
-
-- Business rules
-- Coordination across repositories
-- Transaction boundaries
-- Idempotency and audit coordination
-
-Repositories are responsible for:
-
-- Reads and writes
-- Clearly named business-query semantics
-- Reusable data access methods
-
----
-
-## WebSocket Rules
-
-- Each message type must have an explicit schema
+WebSocket rules:
+- Each message type needs an explicit schema
 - Separate connection, subscription, push, and error message types
-- WebSocket should push real-time state only, not replace database authority
-- Connections need authentication, authorization, and subscription boundaries
-- Do not use vague "catch-all event payload" style protocols
+- WebSocket pushes real-time state; it does not replace database authority
+- Connections need auth, authorization, and subscription boundaries
 
----
+## CLI
+Each command should define input arguments, options, output modes, and exit codes.
 
-## CLI Rules
-
-Each `Commander.js` command should clearly define:
-
-- Input arguments
-- Options
-- Output modes
-- Exit codes
-
-Default output rules:
-
-- Human-readable text in the default mode
-- Stable JSON in `--json` mode
-- Errors written to `stderr`
+Defaults:
+- Human-readable text in normal mode
+- Stable JSON in `--json`
+- Errors in `stderr`
 - Non-zero exit codes for unexpected failures
 
-For complex commands, prefer splitting into:
+Split complex commands into parser, handler, and formatter.
 
-- parser
-- handler
-- formatter
+## Validation And Persistence
+Use `Zod` for HTTP request / response, WebSocket messages, normalized CLI input, and environment variable parsing.
 
----
+Use `Drizzle ORM` for schema definition, clear queries, and transaction-safe writes.
 
-## Schema And Validation
+Do not push all business rules into schemas, and do not leak ORM details into routes.
 
-Use `Zod` by default for:
-
-- HTTP request / response
-- WebSocket messages
-- Normalized CLI input
-- Environment variable parsing
-
-Layering rules:
-
-- Schemas own structure and basic constraints
-- Services own business rules
-- Database constraints provide the final consistency backstop
-
-Do not push all business logic into schemas, and do not rely entirely on database errors for input validation.
-
----
-
-## Database Access
-
-Default responsibilities of `Drizzle ORM`:
-
-- Define schema
-- Express clear queries
-- Support stable writes within transactions
-
-Rules:
-
-- Organize queries around real business access paths
-- Do not leak ORM details into the route layer
-- Keep complex queries readable before optimizing them
-- Use raw SQL only when ORM expressions are unclear or in performance-critical cases
-
----
-
-## Errors And Logging
-
-At minimum, distinguish:
-
-- validation error
-- auth / permission error
-- not found error
-- conflict error
-- external dependency error
-- unexpected internal error
-
-Required:
-
-- API error responses must follow a consistent shape
-- CLI `--json` errors must follow a consistent shape
+## Errors, Testing, Style
+- Distinguish validation, auth, permission, not-found, conflict, dependency, and internal errors
+- API and CLI error shapes must be consistent
 - Logs must include request id, entity id, and trace context
-- Do not swallow errors or collapse everything into a generic 500
-
----
-
-## Testability
-
-New code should, by default, be verifiable in these ways:
-
-- Services can be unit tested
-- Routes can be tested through API tests
-- Repositories can be integration tested
-- Command handlers can be tested without booting the full CLI
-- WebSocket message handling can be tested independently
-
-Time, randomness, and external requests should be replaceable or injectable where possible.
-
----
-
-## Style And Quality
-
-- Use `ESLint` and `Prettier` as the shared baseline
-- Prefer splitting files when they approach `250-300` lines
-- Function names should express the action and object clearly
-- Break complex flows into smaller steps instead of writing very long functions
-
----
+- Services, routes, repositories, commands, and WebSocket handlers should be independently testable
+- Use `ESLint` and `Prettier`
+- Start splitting files around `400` lines, with a hard maximum of `500` lines per code file
 
 ## Avoid
-
-- Turning routes or commands into the business core
-- Letting services directly operate on HTTP objects or stdout
-- Mixing permission and workflow logic into repositories
-- Relying on frontend-backend "mutual understanding" for WebSocket payloads
-- Mixing logs or debug text into `--json` output
-- Introducing overly heavy architecture for a local need
-
----
-
-## Summary
-
-**The default backend model is: `Fastify` and `Commander.js` own the entry points, `Zod` owns boundary validation, services own business orchestration, repositories own data access, `Drizzle ORM` owns clear persistence, and all output protocols must remain stable and testable.**
+- Heavy routes or commands
+- Services directly operating on HTTP objects or stdout
+- Repositories mixed with permission or workflow logic
+- Frontend-backend "mutual understanding" payloads
+- Logs mixed into `--json`
+- Overweight architecture for local needs

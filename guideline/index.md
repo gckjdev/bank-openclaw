@@ -1,39 +1,30 @@
 # Engineering Guidelines Index
 
-## Purpose
+Use this directory as the primary engineering context for the repository.
 
-This directory is the entry point for engineering guidelines used by both AI LLMs and human developers.
+## Priority Order
 
-Goals:
+Apply guidance in this order:
 
-- Serve as the default constraint set when generating code
-- Provide a shared standard for code review
-- Act as supporting context to reduce style drift and architectural sprawl
-
----
-
-## How To Use
-
-When an LLM uses these documents, apply them in this priority order:
-
-1. Explicit user requirements for the current task
-2. Existing implementation patterns and directory structure in the repository
-3. The topic-specific guidelines in this directory
+1. Explicit user request
+2. Existing repository patterns
+3. Relevant guideline file in this directory
 4. General best practices
 
-If a guideline conflicts with the existing codebase:
+If a guideline conflicts with stable existing code, prefer the existing code unless the task is explicitly a refactor.
 
-- Prefer the stable patterns already present in the codebase
-- Do not widen the refactor scope just to "match the guideline"
-- Move toward the guideline gradually through new code or local refactors only
+## Global Defaults
 
-If there is no stronger constraint, default to the rules in this directory.
-
----
+- Make the smallest viable change
+- Reuse existing patterns before introducing new ones
+- Prefer explicit types, schemas, and boundaries
+- Keep modules focused on one responsibility
+- Keep each code file under a hard maximum of `500` lines; start splitting around `400` lines
+- Prefer code that is testable, debuggable, and easy to review
+- Do not invent infrastructure that does not already exist
+- Do not widen scope just to satisfy a guideline
 
 ## Stack Defaults
-
-Current default stack:
 
 - `apps/web`: `TypeScript` + `React` + `Vite`
 - Routing: `TanStack Router`
@@ -46,54 +37,30 @@ Current default stack:
 - ORM / SQL: `Drizzle ORM`
 - Database: `PostgreSQL`
 - Testing: `Vitest` + `supertest` + `Playwright`
-- Engineering baseline: `ESLint` + `Prettier`
-
----
-
-## Global Rules
-
-All topic-specific documents share these default rules:
-
-- Prefer clear, local, maintainable code over premature abstraction
-- Reuse existing patterns before introducing a new architecture
-- Prefer explicit types, schemas, and interface boundaries over implicit conventions
-- Each module should serve a single responsibility
-- New code should favor testability, debuggability, and auditability
-- Do not introduce heavy infrastructure for hypothetical future needs
-
----
+- Baseline tooling: `ESLint` + `Prettier`
 
 ## Which File To Read
 
-- Frontend code: `guideline/frontend.md`
-- Backend code: `guideline/backend.md`
-- UI design: `guideline/ui.md`
+- Frontend: `guideline/frontend.md`
+- Backend: `guideline/backend.md`
+- UI: `guideline/ui.md`
 - Database: `guideline/database.md`
 - Testing: `guideline/testing.md`
 
-Read only the most relevant topic documents for the task. Do not inject all documents into context every time.
+Only read the files relevant to the task.
 
 Recommended combinations:
 
-- For `apps/web` work: read frontend + UI + testing
-- For `apps/cli` or `apps/api` work: read backend + database + testing
-- For schema / migration / repository work: read database + backend
+- `apps/web`: frontend + UI + testing
+- `apps/api` or `apps/cli`: backend + database + testing
+- schema / migration / repository work: database + backend
 
----
+## LLM Behavior
 
-## AI-Specific Guidance
+Default to:
 
-When generating or modifying code, the LLM should default to:
-
-- Making the smallest viable change
-- Preserving the existing naming and directory style
-- Producing directly applicable structure rather than long explanations
-- Making conservative assumptions when information is missing
-- Avoiding invented infrastructure that does not already exist
-- Avoiding "option dump" outputs unless the user explicitly asks for comparisons
-
----
-
-## Summary
-
-**The purpose of these guidelines is to help the LLM make consistent, stable, low-ambiguity engineering decisions across `web`, `cli`, `api`, database, and testing work.**
+- Short, directly applicable output
+- Conservative assumptions when information is missing
+- Local edits over broad rewrites
+- Stable naming consistent with the codebase
+- One clear approach, not an option dump

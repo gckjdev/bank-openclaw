@@ -11,32 +11,26 @@ Applies to:
 - seed
 - repository / query layers
 
----
 
-## AI Usage
-
-When the LLM generates database-related code, the default goals are:
+## Priority
 
 1. Keep the data model clear
 2. Put constraints explicitly in the database
 3. Design around real query paths
 4. Preserve history and auditability
 
-Unless there is a strong reason, do not put core business structure into JSON, and do not build complex models for hypothetical future cases.
+Do not put core business structure into JSON unless the task clearly requires it.
 
----
+## Hard Rules
 
-## Must Rules
-
-- `PostgreSQL` is the single source of database truth
+- `PostgreSQL` is the single source of truth
 - Primary keys, foreign keys, unique constraints, and status fields must be explicit
-- Core query fields must be modeled as explicit columns
+- Core query fields must be explicit columns
+- Keep each database-related code file under a hard maximum of `500` lines; start splitting around `400` lines
 - All schema changes must go through migrations
-- Transaction boundaries for critical write flows must be explicit
+- Critical write flows need explicit transaction boundaries
 - Important state changes must be traceable
-- Repositories handle data access only, not business orchestration
-
----
+- Repositories handle data access only
 
 ## Modeling
 
@@ -44,82 +38,60 @@ Default naming:
 
 - Primary key: `id`
 - Foreign key: `<entity>_id`
-- Timestamp fields: `created_at`, `updated_at`
+- Timestamps: `created_at`, `updated_at`
 
-Default modeling rules:
+Rules:
 
-- One table should represent one core entity or relationship
+- One table represents one core entity or relationship
 - High-frequency filter, sort, and join fields should be explicit columns
-- Enumerated states should use a bounded value set, not vague free text
-- Similar entities should follow consistent naming
-
-Do not use semantically vague column names such as `data`, `info`, or `misc`.
-
----
+- Enumerated states should use bounded values, not vague free text
+- Similar entities should use consistent naming
+- Avoid vague columns such as `data`, `info`, or `misc`
 
 ## JSON Columns
 
-Good candidates for JSON columns:
+Good uses:
 
 - Request snapshots
-- Raw fragments of third-party responses
+- Raw third-party response fragments
 - Non-core extension fields
-- Low-frequency, flexible, snapshot-style content
+- Flexible snapshot-style content
 
-Poor candidates for JSON columns:
+Bad uses:
 
 - High-frequency filter fields
 - Core join relationships
 - Critical state fields
-- Business dimensions that need stable analytics and aggregation
+- Stable analytical dimensions
 
-Default rule: if a core structure can be modeled clearly, prefer explicit columns and relations.
+Prefer explicit columns and relations for core structures.
 
----
+## Drizzle And Repositories
 
-## Drizzle Rules
+Use `Drizzle ORM` for:
 
-Default responsibilities of `Drizzle ORM`:
+- Schema definition
+- Clear queries
+- Transaction-safe writes
 
-- Define database schema
-- Express clear queries
-- Support controlled writes inside transactions
+Rules:
 
-Layering requirements:
-
-- Route and service layers should not scatter raw table operation details
-- Repositories should encapsulate business query semantics
-- Services should own transaction and workflow coordination
-
-For complex queries, prioritize readability before cleverness. Do not create hard-to-maintain ORM constructions just to look advanced.
-
----
+- Do not scatter raw table-operation detail across route and service layers
+- Repositories encapsulate query semantics
+- Services own transactions and workflow coordination
+- Prefer readable queries over clever ORM constructions
 
 ## Migrations
 
-Required:
-
 - All schema changes go through migrations
 - Migrations are version-controlled
-- Schema code and migrations stay consistent
-
-Recommended:
-
-- A migration should contain one clear kind of change
-- Migration names should reflect business intent
-- Breaking changes should follow a compatibility-first migration sequence
-
-Default compatibility-first sequence:
-
-1. Add the new structure first
-2. Switch application code second
-3. Remove the old structure last
-
----
+- Schema code and migrations must stay consistent
+- Each migration should contain one clear kind of change
+- Breaking changes should follow: add new structure -> switch code -> remove old structure
 
 ## Indexing
 
-Fields that should be considered for indexes first:
+Consider indexes first for:
 
 - Foreign keys
 - Status fields
@@ -129,82 +101,35 @@ Fields that should be considered for indexes first:
 
 Before adding an index, answer:
 
-- Which query will use it?
-- How often does that query run?
+- Which query uses it?
+- How often?
 - Is the write cost acceptable?
 - Is there already a similar index?
 
-Do not add indexes mechanically to every field, and do not prebuild complex indexes for hypothetical future queries.
+Do not add indexes mechanically.
 
----
+## Transactions, History, Performance
 
-## Transactions And Idempotency
-
-Required:
-
-- Multi-step write flows that require consistency must be wrapped in explicit transactions
-- Transactions should be managed by the service layer or a clear helper
-- Repositories should not implicitly start complex transactions
-
-Recommended:
-
-- Design idempotency keys for duplicate submissions, external callbacks, and high-risk actions
-- Use unique constraints as the final backstop for critical deduplication logic
-
----
-
-## History And Audit
-
-Important actions should be traceable at least by:
-
-- Actor
-- Action type
-- Related entity
-- Request context
-- Timestamp
-- Result status
-
-History retention may follow one of these clear patterns:
-
-- Current-state table + audit log
-- Current-state table + version history table
-- Event records + aggregate projection
-
-The important part is not which pattern you choose, but that the rule stays stable and the traceability path stays clear.
-
----
-
-## Query And Performance
-
+- Multi-step write flows that require consistency must use explicit transactions
+- Use idempotency keys for duplicate submissions, callbacks, and high-risk actions
+- Use unique constraints as the final deduplication backstop
+- Important actions should be traceable by actor, action type, related entity, request context, timestamp, and result
 - Paginate list queries by default
-- Detail queries should fetch only necessary fields
-- Heavy exports and aggregations should use dedicated paths
-- Avoid N+1 patterns and unbounded full-table scans
-- Do not mix high-frequency transactional queries and analytical queries into one generic endpoint
+- Keep detail queries narrow
+- Use dedicated paths for heavy exports and aggregations
+- Avoid N+1 and unbounded full-table scans
 
----
+## Seeds
 
-## Seed And Fixtures
-
-- Seed data should have clear meaning
+- Seed data should be meaningful
 - Test data should be minimal but complete
-- Distinguish clearly between development seed, demo seed, and test fixtures
-
-Do not use mysterious sample data that nobody can understand.
-
----
+- Distinguish development seed, demo seed, and test fixtures
 
 ## Avoid
 
-- Putting core dimensions into JSON
-- Making schema changes without migrations
-- Skipping foreign keys and relying only on application conventions
-- Overwriting important state without keeping history
-- Scanning full tables without pagination
-- Mixing workflow logic into repositories
-
----
-
-## Summary
-
-**The default database model is: `PostgreSQL` is the single source of truth, core structures are modeled explicitly, changes are managed through migrations, queries are designed around real access paths, and important actions preserve history and auditability.**
+- Core dimensions in JSON
+- Schema changes without migrations
+- Missing foreign keys
+- Overwriting important state without history
+- Full-table scans without pagination
+- Workflow logic inside repositories
