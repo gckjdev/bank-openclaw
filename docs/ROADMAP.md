@@ -117,6 +117,7 @@
 这一阶段要解决的核心问题是：
 
 - 如果以 OpenClaw 这类 Personal AI Assistant 为参考，银行到底应该借鉴什么
+- 如果再引入 Multica 和 Paperclip，三者分别对应银行体系中的哪一层
 - 什么不能照搬
 - 银行版产品究竟应该是什么，而不应该是什么
 
@@ -131,9 +132,18 @@
 - 银行绝不能照搬的是什么
 - 为什么银行真正应该做的是“工作身份驱动的 Assistant OS”
 
+#### 2. `multica-paperclip-openclaw-for-banking.md`
+
+这篇把三者放在一个统一视角下比较，回答：
+
+- OpenClaw 更适合作为哪一层参考
+- Multica 更适合作为哪一层参考
+- Paperclip 更适合作为哪一层参考
+- 银行应该按什么顺序吸收这三类能力
+
 ### 再读
 
-#### 2. `banking-openclaw-prd-draft.md`
+#### 3. `banking-openclaw-prd-draft.md`
 
 这篇把产品方向落到了更清晰的 PRD 结构上，按：
 
@@ -153,6 +163,7 @@
 
 - 银行版产品不是“Personal AI Assistant 银行版”
 - 正确方向是“绑定工作身份、围绕任务运行、服务岗位劳动承接的 Assistant OS”
+- OpenClaw、Multica、Paperclip 不应被视为互斥参考，而应被映射到工作体、任务协同、组织治理三个层次
 - 第一版应聚焦具体岗位，不做通用聊天产品
 
 ---

@@ -26,19 +26,20 @@
 ### 3. 再看产品方向与 OpenClaw 参考
 
 8. `openclaw-analysis-for-banking-assistant.md`
-9. `openclaw-official-architecture-and-tech-stack.md`
-10. `banking-openclaw-product-architecture-sketch.md`
-11. `banking-openclaw-technical-architecture.md`
-12. `banking-openclaw-prd-draft.md`
-13. `banking-openclaw-prd-mvp.md`
+9. `multica-paperclip-openclaw-for-banking.md`
+10. `openclaw-official-architecture-and-tech-stack.md`
+11. `banking-openclaw-product-architecture-sketch.md`
+12. `banking-openclaw-technical-architecture.md`
+13. `banking-openclaw-prd-draft.md`
+14. `banking-openclaw-prd-mvp.md`
 
 ### 4. 最后看任务体系与实现方法
 
-14. `cognitive-substitution-and-orchestration-for-banking-assistant.md`
-15. `task-definition-and-examples-for-banking-assistant.md`
-16. `task-template-vs-dynamic-instance-in-banking-assistant.md`
-17. `long-tail-task-handling-in-banking-assistant.md`
-18. `composite-tasks-in-banking-assistant.md`
+15. `cognitive-substitution-and-orchestration-for-banking-assistant.md`
+16. `task-definition-and-examples-for-banking-assistant.md`
+17. `task-template-vs-dynamic-instance-in-banking-assistant.md`
+18. `long-tail-task-handling-in-banking-assistant.md`
+19. `composite-tasks-in-banking-assistant.md`
 
 ---
 
@@ -134,6 +135,7 @@ FTE 替代测算框架。
 这一组文档回答的是：
 
 - OpenClaw 对银行员工 AI Assistant 的启发是什么
+- Multica、Paperclip 与 OpenClaw 在银行体系中的分工与借鉴关系是什么
 - OpenClaw 官方定义下的技术架构和技术栈是什么
 - 银行版产品应如何银行化改造
 - 架构和 PRD 应该如何从草图走向可落地版本
@@ -141,6 +143,21 @@ FTE 替代测算框架。
 ### `openclaw-analysis-for-banking-assistant.md`
 
 系统分析 OpenClaw 值得借鉴什么、不能照搬什么。
+
+### `multica-paperclip-openclaw-for-banking.md`
+
+系统比较：
+
+- OpenClaw
+- Multica
+- Paperclip
+
+在银行 AI 体系里的不同定位。  
+重点回答：
+
+- 哪些能力应该学 OpenClaw
+- 哪些任务协同思想应该学 Multica
+- 哪些组织治理框架应该学 Paperclip
 
 ### `openclaw-official-architecture-and-tech-stack.md`
 
